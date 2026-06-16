@@ -12,6 +12,7 @@ const errorMessage = document.getElementById('error-message');
 const emptyState = document.getElementById('empty-state');
 const refreshBtn = document.getElementById('refresh-btn');
 const refreshIcon = document.getElementById('refresh-icon');
+const exportCsvBtn = document.getElementById('export-csv-btn');
 const searchInput = document.getElementById('search-input');
 const statusSummary = document.getElementById('status-summary');
 const filterChips = document.querySelectorAll('.filter-chip');
@@ -281,6 +282,28 @@ function renderFeed() {
                     </span>
                 `;
                 
+                // Button Group Wrapper
+                const itemActions = document.createElement('div');
+                itemActions.className = 'item-actions';
+
+                // Copy Button
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'copy-item-btn';
+                copyBtn.innerHTML = `
+                    <span class="material-symbols-outlined" style="font-size: 0.95rem;">content_copy</span>
+                    <span>Copy</span>
+                `;
+                copyBtn.addEventListener('click', async () => {
+                    try {
+                        const copyText = `BigQuery Update (${group.date} - ${item.category}):\n"${item.plainText}"\n\nSource: ${item.link}`;
+                        await navigator.clipboard.writeText(copyText);
+                        showToast('Copied to clipboard!');
+                    } catch (err) {
+                        console.error('Failed to copy text: ', err);
+                        showToast('Failed to copy to clipboard', true);
+                    }
+                });
+
                 // Tweet Button for this entry
                 const tweetBtn = document.createElement('button');
                 tweetBtn.className = 'tweet-item-btn';
@@ -288,14 +311,16 @@ function renderFeed() {
                     <svg viewBox="0 0 24 24" width="14" height="14">
                         <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path>
                     </svg>
-                    <span>Tweet Update</span>
+                    <span>Tweet</span>
                 `;
                 
                 tweetBtn.addEventListener('click', () => {
                     openTweetComposer(item, group.date);
                 });
                 
-                itemHeader.appendChild(tweetBtn);
+                itemActions.appendChild(copyBtn);
+                itemActions.appendChild(tweetBtn);
+                itemHeader.appendChild(itemActions);
                 itemDiv.appendChild(itemHeader);
                 
                 // Content Body
@@ -472,6 +497,72 @@ function showToast(message, isError = false) {
 }
 
 // -------------------------------------------------------------
+// Export Release Notes to CSV
+// -------------------------------------------------------------
+function exportToCSV() {
+    if (releaseNotesData.length === 0) {
+        showToast('No data to export', true);
+        return;
+    }
+    
+    const csvRows = [];
+    csvRows.push(['Date', 'Category', 'Update Content', 'Source Link']);
+    
+    let exportCount = 0;
+    
+    releaseNotesData.forEach(group => {
+        group.items.forEach(item => {
+            let categoryMatch = false;
+            if (activeFilter === 'all') {
+                categoryMatch = true;
+            } else if (activeFilter === 'Other') {
+                categoryMatch = !['Feature', 'Change', 'Deprecated'].includes(item.category);
+            } else {
+                categoryMatch = item.category.toLowerCase() === activeFilter.toLowerCase();
+            }
+            
+            let searchMatch = true;
+            if (searchQuery.trim() !== '') {
+                const query = searchQuery.toLowerCase();
+                const textContent = item.plainText.toLowerCase();
+                const catText = item.category.toLowerCase();
+                const dateText = group.date.toLowerCase();
+                searchMatch = textContent.includes(query) || catText.includes(query) || dateText.includes(query);
+            }
+            
+            if (categoryMatch && searchMatch) {
+                // Escape fields for CSV format
+                const date = group.date.replace(/"/g, '""');
+                const category = item.category.replace(/"/g, '""');
+                const content = item.plainText.replace(/"/g, '""');
+                const link = item.link.replace(/"/g, '""');
+                
+                csvRows.push([`"${date}"`, `"${category}"`, `"${content}"`, `"${link}"`]);
+                exportCount++;
+            }
+        });
+    });
+    
+    if (exportCount === 0) {
+        showToast('No updates match your filters to export', true);
+        return;
+    }
+    
+    const csvContent = csvRows.map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `bigquery_release_notes_${new Date().toISOString().slice(0,10)}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showToast(`Exported ${exportCount} updates to CSV!`);
+}
+
+// -------------------------------------------------------------
 // Event Listeners
 // -------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
@@ -481,6 +572,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Refresh handlers
     refreshBtn.addEventListener('click', () => fetchReleaseNotes(true));
     retryBtn.addEventListener('click', () => fetchReleaseNotes(false));
+    exportCsvBtn.addEventListener('click', exportToCSV);
     
     // Search input handlers (Debounced or quick)
     searchInput.addEventListener('input', (e) => {
