@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BigQuery Release Notes Hub</title>
+    
+    <!-- Google Fonts: Outfit and Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Material Symbols for Premium Icons -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar or Header Panel -->
+        <header class="app-header">
+            <div class="brand">
+                <div class="logo-wrapper">
+                    <span class="material-symbols-outlined logo-icon">database</span>
+                    <div class="logo-glow"></div>
+                </div>
+                <div class="brand-info">
+                    <h1>BigQuery</h1>
+                    <span class="sub-title">Release Notes Tracker</span>
+                </div>
+            </div>
+            
+            <div class="header-actions">
+                <!-- Search bar -->
+                <div class="search-box">
+                    <span class="material-symbols-outlined search-icon">search</span>
+                    <input type="text" id="search-input" placeholder="Search updates...">
+                </div>
+                
+                <!-- Refresh Button -->
+                <button id="refresh-btn" class="btn btn-primary" title="Refresh Release Notes">
+                    <span class="material-symbols-outlined btn-icon" id="refresh-icon">refresh</span>
+                    <span class="btn-text">Refresh</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Stats and Filters Dashboard -->
+        <section class="dashboard-bar">
+            <div class="filter-group">
+                <button class="filter-chip active" data-type="all">All Updates</button>
+                <button class="filter-chip" data-type="Feature">Features</button>
+                <button class="filter-chip" data-type="Change">Changes</button>
+                <button class="filter-chip" data-type="Deprecated">Deprecated</button>
+                <button class="filter-chip" data-type="Other">Other</button>
+            </div>
+            <div class="status-summary" id="status-summary">
+                Loading release notes...
+            </div>
+        </section>
+
+        <!-- Main Feed Grid -->
+        <main class="feed-container">
+            <!-- Loading Indicator -->
+            <div id="loading-state" class="loading-state">
+                <div class="spinner-wrapper">
+                    <div class="double-bounce1"></div>
+                    <div class="double-bounce2"></div>
+                </div>
+                <p>Retrieving the latest release notes from Google Cloud...</p>
+            </div>
+
+            <!-- Error State -->
+            <div id="error-state" class="error-state hidden">
+                <span class="material-symbols-outlined error-icon">error</span>
+                <h3>Failed to load release notes</h3>
+                <p id="error-message">Unknown error occurred.</p>
+                <button id="retry-btn" class="btn btn-secondary">Try Again</button>
+            </div>
+
+            <!-- Feed Content -->
+            <div id="feed-content" class="feed-grid hidden">
+                <!-- Cards will be dynamically inserted here -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="empty-state hidden">
+                <span class="material-symbols-outlined empty-icon">find_in_page</span>
+                <h3>No updates found</h3>
+                <p>Try adjusting your search query or filter settings.</p>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>BigQuery Release Notes Hub &bull; Built with Flask & Vanilla JS</p>
+        </footer>
+    </div>
+
+    <!-- Twitter Composer Modal -->
+    <div id="tweet-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <span class="material-symbols-outlined modal-icon">share</span>
+                    <h2>Compose Tweet</h2>
+                </div>
+                <button class="close-btn" id="close-modal-btn">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="preview-reference">
+                    <span class="ref-label">Original Source:</span>
+                    <span id="tweet-ref-title" class="ref-title">June 15, 2026</span>
+                </div>
+                
+                <div class="composer-container">
+                    <textarea id="tweet-textarea" rows="6" placeholder="What's happening?"></textarea>
+                    
+                    <div class="composer-footer">
+                        <div class="character-count-wrapper">
+                            <span id="char-count">0</span>/280
+                            <div class="progress-ring-container">
+                                <svg class="progress-ring" width="24" height="24">
+                                    <circle class="progress-ring__circle" stroke="#1d9bf0" stroke-width="2" fill="transparent" r="8" cx="12" cy="12"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button id="copy-tweet-btn" class="btn btn-tertiary">
+                    <span class="material-symbols-outlined">content_copy</span>
+                    <span>Copy Text</span>
+                </button>
+                <div class="modal-actions-right">
+                    <button id="cancel-tweet-btn" class="btn btn-secondary">Cancel</button>
+                    <button id="publish-tweet-btn" class="btn btn-tweet">
+                        <svg class="twitter-logo" viewBox="0 0 24 24" aria-hidden="true" width="16" height="16">
+                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path>
+                        </svg>
+                        <span>Post on X</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast-notification hidden">
+        <span class="material-symbols-outlined toast-icon" id="toast-icon">check_circle</span>
+        <span id="toast-message">Action completed successfully.</span>
+    </div>
+</body>
+</html>
